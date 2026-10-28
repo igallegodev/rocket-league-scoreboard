@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marcador RL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <div class="top">
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Sin conexión</span></div>
+    <span id="arena"></span>
+    <span class="me-status" id="meStatus"></span>
+    <span class="spacer"></span>
+    <button id="demoBtn" aria-pressed="false">Modo demo</button>
+    <button id="recBtn" aria-pressed="false" title="Graba todo lo que envía el juego para poder descargarlo. Consume memoria: actívalo solo cuando lo necesites.">Grabar registro</button>
+    <button id="logBtn" disabled>Descargar registro (<span id="logCount">0</span>)</button>
+  </div>
+
+  <section class="board" aria-label="Marcador">
+    <div class="side blue"><span class="team-name" id="n0">Blue</span><span class="goals" id="g0">0</span></div>
+    <div class="clock-wrap">
+      <div class="clock" id="clock">5:00</div>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="side orange"><span class="goals" id="g1">0</span><span class="team-name" id="n1">Orange</span></div>
+  </section>
+
+  <div class="touch" aria-label="Último toque del balón">
+    <span>Último toque</span>
+    <div class="touch-bar"><span id="touchMark"></span></div>
+    <span id="touchText">—</span>
+  </div>
+
+  <div class="help" id="help">
+    <h2>Esperando al juego</h2>
+    <p>Abre Rocket League con la Stats API activada. El panel se conecta solo a <code id="wsUrl"></code> y lo reintenta cada 2 segundos.</p>
+    <p>Para activarla, edita <code>TAGame\Config\TAStatsAPI.ini</code> (o <code>DefaultStatsAPI.ini</code>) en la carpeta de instalación del juego, con el juego cerrado:</p>
+<pre>[TAGame.MatchStatsExporter_TA]
+PacketSendRate=30
+WebPort=49124
+Port=0</pre>
+    <p><code>Port=0</code> cierra el socket TCP (49123) que el juego abre además del WebSocket; el panel no lo usa.</p>
+    <p>Pulsa “Modo demo” para ver el panel con datos simulados.</p>
+  </div>
+
+  <div class="main">
+    <div class="tables">
+      <div class="tbl blue"><table><thead id="head0"></thead><tbody id="rows0"></tbody></table></div>
+      <div class="tbl orange"><table><thead id="head1"></thead><tbody id="rows1"></tbody></table></div>
+    </div>
+    <aside class="feed" aria-live="polite">
+      <h2>Jugadas</h2>
+      <ol id="feed"></ol>
+      <p id="feedEmpty">Aquí aparecerán los goles, paradas y demoliciones.</p>
+    </aside>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

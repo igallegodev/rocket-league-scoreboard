@@ -1,0 +1,15 @@
+# Private working notes
+CLAUDE.md
+.claude/
+
+# Real match logs (they contain other players' names and platform IDs)
+fixtures/
+rl-log-*.json
+
+# Local test tools
+tools/
+
+# OS files
+Thumbs.db
+desktop.ini
+.DS_Store
