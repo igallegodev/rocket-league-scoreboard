@@ -1,0 +1,28 @@
+# Builds the app zip and attaches it to every published release.
+# The asset name is fixed so the README can link to
+# releases/latest/download/rocket-league-scoreboard.zip
+name: Release zip
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build zip
+        run: |
+          mkdir rocket-league-scoreboard
+          cp index.html styles.css app.js README.md README.es.md LICENSE rocket-league-scoreboard/
+          zip -r rocket-league-scoreboard.zip rocket-league-scoreboard
+
+      - name: Attach to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" rocket-league-scoreboard.zip --clobber

@@ -50,7 +50,7 @@ Any change requires restarting the game.
 
 ## Usage
 
-1. Download the [latest release](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest) (**Source code (zip)**) and unzip it.
+1. Download [rocket-league-scoreboard.zip](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest/download/rocket-league-scoreboard.zip) (from the [latest release](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest)) and unzip it.
 2. Double-click `index.html`. Nothing to install.
 3. Start the game and join a match. The panel connects on its own and, if the game isn't running, retries every 2 seconds.
 
