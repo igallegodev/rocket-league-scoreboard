@@ -123,8 +123,19 @@ button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-
 .touch-bar span { position: absolute; top: 0; bottom: 0; width: 50%; transition: left .25s, background .25s; }
 
 /* Tables */
-.main { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
-@media (max-width: 1250px) { .main { grid-template-columns: 1fr; } }
+/* Wide: tables with the session below them, feed in the side column across both rows.
+   The 1fr row takes any extra height from a tall feed, so the session stays right under the tables. */
+.main {
+  display: grid; gap: 12px 16px; align-items: start;
+  grid-template-columns: 1fr 300px; grid-template-rows: auto 1fr;
+  grid-template-areas: "tables feed" "session feed";
+}
+.tables { grid-area: tables; }
+.feed { grid-area: feed; }
+.session { grid-area: session; }
+@media (max-width: 1250px) {
+  .main { grid-template-columns: 1fr; grid-template-rows: none; grid-template-areas: "tables" "feed" "session"; }
+}
 .tables { display: grid; gap: 12px; }
 .tbl {
   background: var(--surface);
@@ -167,17 +178,47 @@ td.pts { font-weight: 700; }
 .boost { flex: 0 1 56px; min-width: 20px; height: 8px; border-radius: 4px; background: var(--line); vertical-align: middle; overflow: hidden; }
 .boost i { display: block; height: 100%; background: var(--warn); }
 .empty-row td { font: 400 15px var(--body); color: var(--muted); text-align: left; }
+.plat { font: 500 12px var(--body); color: var(--muted); margin-left: 8px; }
 
-/* Feed */
-.feed {
+.feed, .session {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 16px;
 }
+
+/* Session */
+.sess-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.sess-head h2 { font: 600 20px var(--cond); margin: 0; }
+.sess-head button { font-size: 13px; padding: 4px 10px; }
+#sessBody { display: grid; grid-template-columns: minmax(180px, auto) 1fr auto; gap: 8px 32px; align-items: start; }
+#sessBody > .sess-empty { grid-column: 1 / -1; }
+@media (max-width: 700px) { #sessBody { grid-template-columns: 1fr; } }
+.sess-col h3 { font: 500 13px var(--body); color: var(--muted); margin: 0; }
+.sess-empty, .sess-line { margin: 0; color: var(--muted); font-size: 14px; }
+.sess-line { margin-top: 6px; }
+.sess-wl { display: flex; align-items: baseline; gap: 12px; font-family: var(--cond); }
+.sess-wl .w, .sess-wl .l { font-size: 36px; font-weight: 700; line-height: 1; }
+.sess-wl .w { color: var(--ok); }
+.sess-wl .l { color: var(--bad); }
+.sess-wl .pct { font-size: 20px; color: var(--muted); margin-left: auto; }
+.sess-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sess-list li { font: 500 15px var(--cond); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--line); }
+.sess-list li b { font-weight: 700; }
+.sess-list li.w b { color: var(--ok); }
+.sess-list li.l b { color: var(--bad); }
+.sess-list small { font: 500 11px var(--body); color: var(--muted); }
+.sess-stats { width: auto; min-width: 0; table-layout: auto; }
+.sess-stats th, .sess-stats td { padding: 3px 0 3px 8px; border: 0; font-size: 15px; }
+.sess-stats th:first-child { padding-left: 0; }
+.sess-stats td { font: 500 17px var(--cond); }
+.sess-stats tbody th { font: 400 14px var(--body); color: var(--text); text-align: left; }
+
+/* Feed */
 .feed h2 { font: 600 20px var(--cond); margin: 0 0 8px; }
 .feed ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.feed li { font-size: 15px; display: grid; grid-template-columns: 44px 1fr; gap: 8px; }
+.feed li { font-size: 15px; display: grid; grid-template-columns: 44px 1fr; gap: 8px; padding: 2px 6px; margin: 0 -6px; border-radius: 4px; }
+.feed li.mine { background: var(--bg); box-shadow: inset 3px 0 0 var(--text); }
 .feed time { color: var(--muted); font-family: var(--cond); font-size: 16px; }
 .feed .b { color: var(--blue); font-weight: 600; }
 .feed .o { color: var(--orange); font-weight: 600; }

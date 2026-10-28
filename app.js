@@ -58,13 +58,14 @@
   const log = [];
   let recording = false; // off by default to avoid piling up memory
   const LOG_MAX = 60000; // ~33 min at 30 messages/s, ~70 MB of JSON without repeated Loadouts
-  let ws = null, retry = null, demo = null;
+  let ws = null, retry = null, demo = null, realSession = null;
 
   function freshState() {
     return {
       players: [], teams: [{ Name: 'Blue', Score: 0 }, { Name: 'Orange', Score: 0 }],
       time: 300, ot: false, ballTeam: 255, arena: '', winner: '', replay: false,
       maxHit: {}, feed: [], hasBoost: false, goalReplay: false, seen: {}, meLocked: false,
+      guid: '', ended: false, mvp: false,
     };
   }
   function load(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -136,10 +137,16 @@
       case 'StatfeedEvent': onStat(d); break;
       case 'MatchEnded':
         addFeed(`<span class="goal">Fin del partido.</span> Gana ${teamSpan(d.WinnerTeamNum, teamName(d.WinnerTeamNum))}`, 'end', { always: true, window: 30000 });
+        state.ended = true;
+        recordMatch(d.WinnerTeamNum);
+        break;
+      // Destroyed without MatchEnded: you left before the end (unverified with a real log)
+      case 'MatchDestroyed':
+        if (!state.ended) recordMatch(null);
         break;
       case 'CrossbarHit': {
         const p = d.BallLastTouch?.Player;
-        if (p) addFeed(`Larguero de ${playerSpan(p)}`, 'bar|' + p.Name, { window: 300 });
+        if (p) addFeed(`Larguero de ${playerSpan(p)}`, 'bar|' + p.Name, { window: 300, who: [p.Name] });
         break;
       }
       case 'GoalReplayStart': state.goalReplay = true; renderClock(); break;
@@ -148,15 +155,18 @@
   }
 
   function onUpdate(d) {
+    // MatchGuid only comes online; a new one means a new match even without MatchCreated
+    if (d.MatchGuid && d.MatchGuid !== state.guid) Object.assign(state, { guid: d.MatchGuid, ended: false, mvp: false });
     if (Array.isArray(d.Players)) {
       state.players = d.Players;
       state.hasBoost = d.Players.some(p => typeof p.Boost === 'number');
     }
     const g = d.Game || {};
+    let scored = false;
     if (Array.isArray(g.Teams)) {
       g.Teams.forEach(t => {
         const old = state.teams[t.TeamNum];
-        if (old && t.Score > old.Score) flashGoal(t.TeamNum);
+        if (old && t.Score > old.Score) { flashGoal(t.TeamNum); scored = true; }
         state.teams[t.TeamNum] = { Name: t.Name, Score: t.Score, Color: t.ColorPrimary };
       });
     }
@@ -168,7 +178,8 @@
     state.replay = !!g.bReplay;
     detectMe(g);
     applyTeamColors();
-    render();
+    // A goal is drawn at once, in sync with its animation; the rest is throttled
+    if (scored) render(); else scheduleRender();
   }
 
   // Detects who you are: while you play, the camera follows you. Takes the
@@ -180,7 +191,7 @@
     const name = g.Target?.Name;
     if (!name || !state.players.some(p => p.Name === name)) return;
     state.meLocked = true;
-    if (me !== name) { me = name; save('rl-me', me); }
+    if (me !== name) { me = name; save('rl-me', me); drawFeed(); }
   }
 
   function onHit(d) {
@@ -206,26 +217,107 @@
       speed = ` a ${Math.round(kmh)} km/h`;
     }
     const assist = d.Assister ? `, asistencia de ${playerSpan(d.Assister)}` : '';
-    addFeed(`<span class="goal">Gol</span> de ${playerSpan(s)}${speed}${assist}`, 'goal|' + s.Name, { window: 300 });
+    addFeed(`<span class="goal">Gol</span> de ${playerSpan(s)}${speed}${assist}`, 'goal|' + s.Name,
+      { window: 300, who: [s.Name, d.Assister?.Name] });
   }
 
-  const STAT_SKIP = new Set(['Goal', 'Shot', 'Assist', 'Win', 'MVP']);
+  const STAT_SKIP = new Set(['Goal', 'Shot', 'Assist', 'Win']);
 
   function onStat(d) {
     if (!d.MainTarget || STAT_SKIP.has(d.EventName)) return;
+    const isMvp = d.EventName === 'MVP';
+    if (isMvp && d.MainTarget.Name === me) {
+      state.mvp = true;
+      // In the online log MVP arrives just before MatchEnded; if it ever comes after, fix the saved match
+      const last = session.matches.at(-1);
+      if (last && last.id === state.guid && !last.mvp) { last.mvp = true; saveSession(); renderSession(); }
+    }
     // Text exactly as the game shows it (already in the game's language)
     const label = d.Type || d.EventName;
     const extra = d.SecondaryTarget && d.EventName === 'Demolish' ? ` a ${playerSpan(d.SecondaryTarget)}` : '';
     // Offline, the game can send the same stat event several times in the same
     // millisecond (up to 4 copies seen): only the first copy is kept.
     addFeed(`${label} de ${playerSpan(d.MainTarget)}${extra}`,
-      'stat|' + d.EventName + '|' + d.MainTarget.Name + '|' + (d.SecondaryTarget?.Name || ''), { window: 300 });
+      'stat|' + d.EventName + '|' + d.MainTarget.Name + '|' + (d.SecondaryTarget?.Name || ''),
+      // MVP arrives at the very end, while the last goal replay is still flagged
+      { window: 300, who: [d.MainTarget.Name], always: isMvp });
   }
+
+  // ---------- Session ----------
+  // Online matches you finish, kept in localStorage. A new session starts after
+  // 6 h without playing or with the "Nueva sesión" button.
+  const SESSION_KEY = 'rl-session', SESSION_IDLE = 6 * 3600e3;
+  const newSession = () => ({ started: Date.now(), last: Date.now(), matches: [] });
+  function loadSession() {
+    try {
+      const s = JSON.parse(load(SESSION_KEY));
+      if (s && Array.isArray(s.matches) && Date.now() - s.last < SESSION_IDLE) return s;
+    } catch {}
+    return newSession();
+  }
+  let session = loadSession();
+  let sessionPersist = true; // false in demo mode, which uses its own throwaway session
+  function saveSession() { if (sessionPersist) save(SESSION_KEY, JSON.stringify(session)); }
+
+  // winner: WinnerTeamNum from MatchEnded, or null if the match was abandoned.
+  // Only online matches (they have a MatchGuid) where you were detected.
+  function recordMatch(winner) {
+    if (!state.guid || session.matches.some(m => m.id === state.guid)) return;
+    const p = state.players.find(x => x.Name === me);
+    if (!p) return;
+    const t = p.TeamNum;
+    if (Date.now() - session.last >= SESSION_IDLE) session = newSession();
+    session.matches.push({
+      id: state.guid, at: Date.now(), won: winner === t, abandoned: winner === null,
+      my: state.teams[t]?.Score ?? 0, opp: state.teams[1 - t]?.Score ?? 0,
+      goals: p.Goals || 0, assists: p.Assists || 0, saves: p.Saves || 0,
+      shots: p.Shots || 0, demos: p.Demos || 0, score: p.Score || 0, mvp: state.mvp,
+    });
+    session.last = Date.now();
+    saveSession();
+    renderSession();
+  }
+
+  const fmt1 = n => n.toLocaleString('es-ES', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  function renderSession() {
+    const ms = session.matches, n = ms.length;
+    if (!n) { $('sessBody').innerHTML = '<p class="sess-empty">Aquí aparecerán las partidas online que termines.</p>'; return; }
+    const wins = ms.filter(m => m.won).length;
+    let streak = 0;
+    for (let i = n - 1; i >= 0 && ms[i].won === ms[n - 1].won; i--) streak++;
+    let best = 0, run = 0;
+    ms.forEach(m => { run = m.won ? run + 1 : 0; best = Math.max(best, run); });
+    const sum = k => ms.reduce((a, m) => a + m[k], 0);
+    const goals = sum('goals'), shots = sum('shots');
+    const rows = [['Goles', 'goals'], ['Asist.', 'assists'], ['Paradas', 'saves'], ['Demos', 'demos']]
+      .map(([label, k]) => `<tr><th scope="row">${label}</th><td>${sum(k)}</td><td>${fmt1(sum(k) / n)}</td></tr>`).join('');
+    const list = ms.slice(-10).reverse().map(m =>
+      `<li class="${m.won ? 'w' : 'l'}" title="${m.abandoned ? 'Abandonada' : m.won ? 'Victoria' : 'Derrota'} ${m.my}-${m.opp}">
+        <b>${m.won ? 'V' : 'D'}</b> ${m.my}-${m.opp}${m.abandoned ? ' <small>aband.</small>' : ''}${m.mvp ? ' <small>MVP</small>' : ''}</li>`).join('');
+    const streakTxt = `Racha: ${streak} ${ms[n - 1].won ? (streak === 1 ? 'victoria' : 'victorias') : (streak === 1 ? 'derrota' : 'derrotas')}`;
+    // Three columns side by side (summary, last results, your stats); they stack on narrow screens
+    $('sessBody').innerHTML = `
+      <div class="sess-col">
+        <div class="sess-wl"><span class="w">${wins}V</span><span class="l">${n - wins}D</span><span class="pct">${Math.round(wins / n * 100)} %</span></div>
+        <p class="sess-line">${streakTxt} · Mejor: ${best}</p>
+        <p class="sess-line">MVP: ${sum('mvp')} · Tiros a gol: ${shots ? Math.round(goals / shots * 100) + ' %' : '–'}</p>
+      </div>
+      <div class="sess-col"><h3>Últimas partidas</h3><ol class="sess-list">${list}</ol></div>
+      <div class="sess-col"><table class="sess-stats"><thead><tr><th></th><th scope="col">Total</th><th scope="col">Por partida</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  $('sessReset').addEventListener('click', () => {
+    if (!confirm('¿Empezar una sesión nueva? Se borrará el historial de esta sesión.')) return;
+    session = newSession(); saveSession(); renderSession();
+  });
 
   // ---------- Render ----------
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const teamSpan = (t, txt) => `<span class="${t === 0 ? 'b' : 'o'}">${esc(txt)}</span>`;
   const playerSpan = p => teamSpan(p.TeamNum, p.Name);
+
+  // Platform from PrimaryId ("Steam|123|0"). Offline bots come as "Unknown|0|0".
+  const PLATFORMS = { Steam: 'Steam', Epic: 'Epic', PS4: 'PS', PS5: 'PS', XboxOne: 'Xbox', Switch: 'Switch' };
+  const platform = id => id === 'Unknown|0|0' ? 'Bot' : PLATFORMS[String(id || '').split('|')[0]] || '';
 
   function fmtClock(sec) {
     sec = Math.max(0, Math.floor(sec));
@@ -233,9 +325,8 @@
   }
 
   function renderClock() {
-    const c = $('clock');
-    c.textContent = (state.ot ? '+' : '') + fmtClock(state.time);
-    c.classList.toggle('ot', state.ot);
+    setText('clock', (state.ot ? '+' : '') + fmtClock(state.time));
+    $('clock').classList.toggle('ot', state.ot);
     let sub = '';
     if (state.winner) {
       const i = state.teams.findIndex(t => t && t.Name === state.winner);
@@ -243,12 +334,15 @@
     }
     else if (inReplay()) sub = 'Repetición';
     else if (state.ot) sub = 'Prórroga';
-    $('sub').textContent = sub;
+    setText('sub', sub);
   }
 
   function renderTouch() {
     const mark = $('touchMark');
     const t = state.ballTeam;
+    const key = t + '|' + teamName(t);
+    if (drawn.touch === key) return;
+    drawn.touch = key;
     if (t === 0) { mark.style.left = '0'; mark.style.background = 'var(--blue)'; $('touchText').textContent = teamName(0); }
     else if (t === 1) { mark.style.left = '50%'; mark.style.background = 'var(--orange)'; $('touchText').textContent = teamName(1); }
     else { mark.style.left = '25%'; mark.style.background = 'transparent'; $('touchText').textContent = '—'; }
@@ -269,13 +363,14 @@
     if (!list.length) return `<tr class="empty-row"><td colspan="${cols}">Sin jugadores todavía</td></tr>`;
     return list.map(p => {
       const hit = state.maxHit[p.Name];
+      const plat = platform(p.PrimaryId);
       // The game omits fields that are 0: bHasCar without Boost means 0. No bHasCar
       // means no data (online, opponents outside replays).
       const known = 'bHasCar' in p;
       const b = typeof p.Boost === 'number' ? Math.max(0, Math.min(100, Math.round(p.Boost))) : 0;
       const boost = `<td class="boost-cell"${known ? '' : ' title="Sin dato"'}><div class="boost-wrap"><span class="boost"><i style="width:${known ? b : 0}%"></i></span><span class="boost-num">${known ? b : '—'}</span></div></td>`;
       return `<tr class="${p.Name === me ? 'me' : ''}">
-        <td><span class="name">${esc(p.Name)}</span></td>
+        <td><span class="name">${esc(p.Name)}</span>${plat ? `<span class="plat">${plat}</span>` : ''}</td>
         <td class="pts">${p.Score ?? 0}</td><td>${p.Goals ?? 0}</td><td>${p.Assists ?? 0}</td>
         <td>${p.Saves ?? 0}</td><td>${p.Shots ?? 0}</td><td>${p.Touches ?? 0}</td><td>${p.Demos ?? 0}</td>
         <td>${hit ? Math.round(hit) + ' km/h' : '–'}</td>${boost}
@@ -283,18 +378,33 @@
     }).join('');
   }
 
+  // UpdateState arrives ~30 times/s, but redrawing the tables more than ~10 times/s
+  // adds nothing visible and costs CPU on a PC that is running the game (and maybe OBS).
+  const RENDER_MS = 100;
+  let renderTimer = null, lastRender = 0;
+  function scheduleRender() {
+    if (renderTimer) return;
+    renderTimer = setTimeout(render, Math.max(0, lastRender + RENDER_MS - performance.now()));
+  }
+
+  // Only touch the DOM when the content actually changes
+  const drawn = {};
+  function setHTML(id, html) { if (drawn[id] !== html) { drawn[id] = html; $(id).innerHTML = html; } }
+  function setText(id, txt) { txt = String(txt); if (drawn[id] !== txt) { drawn[id] = txt; $(id).textContent = txt; } }
+
   function render() {
+    clearTimeout(renderTimer); renderTimer = null;
+    lastRender = performance.now();
     [0, 1].forEach(t => {
       const team = state.teams[t] || {};
-      $('n' + t).textContent = teamName(t);
-      $('g' + t).textContent = team.Score ?? 0;
-      $('head' + t).innerHTML = headHTML();
-      $('rows' + t).innerHTML = rowsHTML(t);
+      setText('n' + t, teamName(t));
+      setText('g' + t, team.Score ?? 0);
+      setHTML('rows' + t, rowsHTML(t));
     });
-    $('arena').textContent = state.arena ? `Mapa: ${state.arena}` : '';
+    setText('arena', state.arena ? `Mapa: ${state.arena}` : '');
     const inMatch = state.players.some(p => p.Name === me);
-    $('meStatus').innerHTML = me && inMatch ? `Eres <strong>${esc(me)}</strong>`
-      : state.players.length ? 'Sin detectar quién eres' : '';
+    setHTML('meStatus', me && inMatch ? `Eres <strong>${esc(me)}</strong>`
+      : state.players.length ? 'Sin detectar quién eres' : '');
     renderClock();
     renderTouch();
   }
@@ -309,12 +419,14 @@
     if (!opts.always && inReplay()) return;
     if (key && recentlySeen(key, win)) return;
     if (key) state.seen[key] = Date.now();
-    state.feed.unshift({ time: (state.ot ? '+' : '') + fmtClock(state.time), html, key, at: Date.now() });
+    state.feed.unshift({ time: (state.ot ? '+' : '') + fmtClock(state.time), html, key, at: Date.now(), who: opts.who || [] });
     drawFeed();
   }
   function drawFeed() {
     state.feed = state.feed.slice(0, 12);
-    $('feed').innerHTML = state.feed.map(f => `<li><time>${f.time}</time><span>${f.html}</span></li>`).join('');
+    // Your own plays are highlighted; checked on each draw because "you" may be detected later
+    $('feed').innerHTML = state.feed.map(f =>
+      `<li${me && f.who.includes(me) ? ' class="mine"' : ''}><time>${f.time}</time><span>${f.html}</span></li>`).join('');
     $('feedEmpty').hidden = state.feed.length > 0;
   }
 
@@ -358,17 +470,32 @@
     $('demoBtn').setAttribute('aria-pressed', 'true');
     $('help').hidden = true;
     setStatus('ok', 'Modo demo (datos simulados)');
-    const names = [['Nova', 0], ['Rafa_RL', 0], ['Lucía', 0], ['Kaiser', 1], ['NoPressure', 1], ['Turbo99', 1]];
-    const P = names.map(([Name, TeamNum], i) => ({ Name, TeamNum, Shortcut: i + 1, Score: 0, Goals: 0, Shots: 0, Assists: 0, Saves: 0, Touches: 0, CarTouches: 0, Demos: 0 }));
-    const sim = { time: 300, ot: false, score: [0, 0], ticks: 0 };
+    // Demo mode uses its own throwaway session, seeded with a few results
+    realSession = session; sessionPersist = false;
+    session = newSession();
+    [[3, 1, 1, 1, 2, 3, 0, true], [2, 4, 1, 0, 1, 4, 1, false], [2, 1, 0, 2, 3, 1, 0, false]].forEach(([my, opp, goals, assists, saves, shots, demos, mvp], i) =>
+      session.matches.push({ id: 'demo-seed-' + i, at: Date.now(), won: my > opp, abandoned: false, my, opp, goals, assists, saves, shots, demos, score: 0, mvp }));
+    renderSession();
+    const names = [['Nova', 0, 'Steam'], ['Rafa_RL', 0, 'Epic'], ['Lucía', 0, 'PS4'], ['Kaiser', 1, 'XboxOne'], ['NoPressure', 1, 'Steam'], ['Turbo99', 1, 'Switch']];
+    const P = names.map(([Name, TeamNum, plat], i) => ({ Name, PrimaryId: `${plat}|${1000 + i}|0`, TeamNum, Shortcut: i + 1, Score: 0, Goals: 0, Shots: 0, Assists: 0, Saves: 0, Touches: 0, CarTouches: 0, Demos: 0 }));
+    const sim = { time: 300, ot: false, score: [0, 0], ticks: 0, match: 1 };
     const send = (Event, Data) => handleRaw(JSON.stringify({ Event, Data }), true);
     const ref = p => ({ Name: p.Name, Shortcut: p.Shortcut, TeamNum: p.TeamNum });
     const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+    // Same order as online: MVP, then MatchEnded; then a new match with a new MatchGuid
+    const endMatch = winner => {
+      const mvp = P.filter(p => p.TeamNum === winner).sort((a, b) => b.Score - a.Score)[0];
+      send('StatfeedEvent', { EventName: 'MVP', Type: 'MVP', MainTarget: ref(mvp) });
+      send('MatchEnded', { WinnerTeamNum: winner });
+      Object.assign(sim, { time: 300, ot: false, score: [0, 0], match: sim.match + 1 });
+      P.forEach(p => Object.assign(p, { Score: 0, Goals: 0, Shots: 0, Assists: 0, Saves: 0, Touches: 0, Demos: 0 }));
+      state.maxHit = {};
+    };
     send('MatchCreated', {});
     demo = setInterval(() => {
       sim.ticks++;
       if (sim.ticks % 10 === 0) {
-        if (!sim.ot) { sim.time -= 1; if (sim.time <= 0) { if (sim.score[0] === sim.score[1]) { sim.ot = true; sim.time = 0; } else { send('MatchEnded', { WinnerTeamNum: sim.score[0] > sim.score[1] ? 0 : 1 }); sim.time = 300; sim.score = [0, 0]; P.forEach(p => Object.assign(p, { Score: 0, Goals: 0, Shots: 0, Assists: 0, Saves: 0, Touches: 0, Demos: 0 })); state.maxHit = {}; } } }
+        if (!sim.ot) { sim.time -= 1; if (sim.time <= 0) { if (sim.score[0] === sim.score[1]) { sim.ot = true; sim.time = 0; } else endMatch(sim.score[0] > sim.score[1] ? 0 : 1); } }
         else sim.time += 1;
       }
       if (Math.random() < 0.25) {
@@ -384,10 +511,11 @@
         const as = Math.random() < 0.5 ? pick(mates) : null;
         if (as) { as.Assists++; as.Score += 50; }
         send('GoalScored', { GoalSpeed: 60 + Math.random() * 60, ImpactLocation: { X: (Math.random() * 2 - 1) * 800, Y: (s.TeamNum ? -1 : 1) * 5200, Z: 200 }, Scorer: ref(s), Assister: as ? ref(as) : undefined, BallLastTouch: { Player: ref(s), Speed: 100 } });
-        if (sim.ot) { send('MatchEnded', { WinnerTeamNum: s.TeamNum }); sim.ot = false; sim.time = 300; sim.score = [0, 0]; P.forEach(p => Object.assign(p, { Score: 0, Goals: 0, Shots: 0, Assists: 0, Saves: 0, Touches: 0, Demos: 0 })); state.maxHit = {}; }
+        if (sim.ot) endMatch(s.TeamNum);
       }
       if (sim.ticks % 3 === 0) {
         send('UpdateState', {
+          MatchGuid: 'demo-' + sim.match,
           // Like online: car and boost only for your own team, and Boost omitted when 0
           Players: P.map(p => {
             const o = { ...p };
@@ -409,10 +537,13 @@
     clearInterval(demo); demo = null;
     $('demoBtn').setAttribute('aria-pressed', 'false');
     state = freshState(); applyTeamColors();
+    session = realSession; sessionPersist = true; renderSession();
     $('feed').innerHTML = ''; $('feedEmpty').hidden = false;
     render();
   }
 
+  [0, 1].forEach(t => { $('head' + t).innerHTML = headHTML(); });
   render();
+  renderSession();
   if (params.has('demo')) startDemo(); else connect();
 })();

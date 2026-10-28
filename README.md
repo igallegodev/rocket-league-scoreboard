@@ -10,10 +10,11 @@ Lee la [Stats API oficial de Rocket League](https://www.rocketleague.com/develop
 
 - **Marcador**: nombre y color de cada equipo (incluidos los de club), goles, reloj y prórroga, con avisos de "Repetición", "Prórroga" o "Ganador".
 - **Último toque**: qué equipo tocó el balón por última vez.
-- **Una tabla por equipo**, ordenada por puntos: puntos, goles, asistencias, paradas, tiros, toques, demoliciones, golpe más fuerte (km/h) y boost.
-- **Jugadas**: las últimas 12 (goles con velocidad y asistente, paradas, demoliciones, larguerazos, fin del partido), con el texto tal cual lo da el juego, en su idioma.
+- **Una tabla por equipo**, ordenada por puntos: plataforma de cada jugador (Steam, Epic, PS, Xbox, Switch), puntos, goles, asistencias, paradas, tiros, toques, demoliciones, golpe más fuerte (km/h) y boost.
+- **Jugadas**: las últimas 12 (goles con velocidad y asistente, paradas, demoliciones, larguerazos, MVP y fin del partido), con el texto tal cual lo da el juego, en su idioma. Las tuyas aparecen resaltadas.
+- **Sesión**: victorias y derrotas de las partidas online que terminas, % de victorias, racha actual y mejor racha, los últimos 10 resultados, y tus goles, asistencias, paradas y demoliciones (en total y por partida), MVP y % de tiros que acaban en gol. Se guarda en el navegador y se reinicia sola tras 6 horas sin jugar, o con el botón **Nueva sesión**. Si sales de una partida antes de que acabe, cuenta como derrota ("aband.").
 - **"Tú"**: tu fila se resalta automáticamente.
-- **Tema claro y oscuro** según el sistema, y diseño adaptable: por debajo de 1250 px de ancho, las jugadas pasan debajo de las tablas.
+- **Tema claro y oscuro** según el sistema, y diseño adaptable: la sesión va debajo de las tablas y las jugadas en una columna a la derecha; por debajo de 1250 px de ancho, las jugadas pasan debajo de las tablas y la sesión al final.
 
 ## Requisitos
 
@@ -57,7 +58,7 @@ Se combinan con `&`, por ejemplo `index.html?demo&me=Kaiser`.
 
 ### Modo demo
 
-El botón **Modo demo** simula una partida 3v3 para ver el panel sin el juego abierto. Los datos tienen la misma forma que los reales.
+El botón **Modo demo** simula una partida 3v3 para ver el panel sin el juego abierto. Los datos tienen la misma forma que los reales. La demo usa una sesión de ejemplo propia, que no toca tu historial real.
 
 ### Grabar un registro
 
@@ -77,6 +78,7 @@ Algunos comportamientos de la API no coinciden con su documentación. Esto es lo
 - **Sin rango ni MMR**: la API no los envía.
 - **Idioma**: los nombres de equipo sin club y los textos de las jugadas llegan en el idioma del juego.
 - **Quién eres**: se deduce del jugador al que sigue la cámara al empezar cada partida. Si estás espectando o la detección falla, usa `?me=`.
+- **La sesión solo cuenta partidas online**: las partidas offline o contra bots no traen identificador de partida y no se guardan.
 
 ## Seguridad
 
