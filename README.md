@@ -1,29 +1,39 @@
 # rocket-league-scoreboard
 
-Marcador en directo para Rocket League, pensado para tenerlo abierto en una segunda pantalla mientras juegas. Muestra algo parecido a la tabla que sale al pulsar Tab, con algunos datos extra, y se actualiza en tiempo real.
+**English** · [Español](README.es.md)
 
-Lee la [Stats API oficial de Rocket League](https://www.rocketleague.com/developer/stats-api), un socket local que abre el propio juego. No hay servidor ni cuenta: la página se conecta directamente al juego en tu PC.
+A live scoreboard for Rocket League, meant to sit on a second screen while you play. It shows something similar to the table you get when you press Tab, plus some extra data, and updates in real time.
 
-> Proyecto no oficial. No está afiliado, patrocinado ni respaldado por Psyonix ni por Epic Games. Rocket League es una marca de Psyonix LLC.
+It reads the [official Rocket League Stats API](https://www.rocketleague.com/developer/stats-api), a local socket opened by the game itself. There is no server and no account: the page connects straight to the game on your PC.
 
-## Qué muestra
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-en-dark.png">
+  <img alt="Panel in demo mode: scoreboard, both team tables with platform and boost, session and plays" src="docs/screenshot-en-light.png">
+</picture>
 
-- **Marcador**: nombre y color de cada equipo (incluidos los de club), goles, reloj y prórroga, con avisos de "Repetición", "Prórroga" o "Ganador".
-- **Último toque**: qué equipo tocó el balón por última vez.
-- **Una tabla por equipo**, ordenada por puntos: plataforma de cada jugador (Steam, Epic, PS, Xbox, Switch), puntos, goles, asistencias, paradas, tiros, toques, demoliciones, golpe más fuerte (km/h) y boost.
-- **Jugadas**: las últimas 12 (goles con velocidad y asistente, paradas, demoliciones, larguerazos, MVP y fin del partido), con el texto tal cual lo da el juego, en su idioma. Las tuyas aparecen resaltadas.
-- **Sesión**: victorias y derrotas de las partidas online que terminas, % de victorias, racha actual y mejor racha, los últimos 10 resultados, y tus goles, asistencias, paradas y demoliciones (en total y por partida), MVP y % de tiros que acaban en gol. Se guarda en el navegador y se reinicia sola tras 6 horas sin jugar, o con el botón **Nueva sesión**. Si sales de una partida antes de que acabe, cuenta como derrota ("aband.").
-- **"Tú"**: tu fila se resalta automáticamente.
-- **Tema claro y oscuro** según el sistema, y diseño adaptable: la sesión va debajo de las tablas y las jugadas en una columna a la derecha; por debajo de 1250 px de ancho, las jugadas pasan debajo de las tablas y la sesión al final.
+*Screenshot in demo mode, with simulated data.*
 
-## Requisitos
+> Unofficial project. Not affiliated with, sponsored or endorsed by Psyonix or Epic Games. Rocket League is a trademark of Psyonix LLC.
 
-- Rocket League en el mismo PC que el navegador.
-- Un navegador actual (Chrome, Edge o Firefox).
+## What it shows
 
-## Activar la Stats API
+- **Scoreboard**: each team's name and color (club ones included), goals, clock and overtime, with "Replay", "Overtime" or "Winner" notes.
+- **Last touch**: which team touched the ball last.
+- **One table per team**, sorted by score: each player's platform (Steam, Epic, PS, Xbox, Switch), score, goals, assists, saves, shots, touches, demolitions, hardest hit (km/h) and boost.
+- **Plays**: the last 12 (goals with speed and assister, saves, demolitions, crossbar hits, MVP and end of match). Yours are highlighted.
+- **Session**: wins and losses of the online matches you finish, win rate, current and best streak, the last 10 results, and your goals, assists, saves and demolitions (total and per match), MVPs and shooting percentage. It is saved in the browser and resets by itself after 6 hours without playing, or with the **New session** button. Leaving a match before it ends counts as a loss ("left").
+- **"You"**: your row is highlighted automatically.
+- **English and Spanish**, with the **ES | EN** switch in the top bar.
+- **Light and dark theme** following your system, and a responsive layout: the session sits below the tables and the plays in a column on the right; below 1250 px wide, the plays move below the tables and the session goes last.
 
-La API viene desactivada. Con el juego **cerrado**, edita `TAGame\Config\TAStatsAPI.ini` en la carpeta de instalación del juego (o `DefaultStatsAPI.ini` si no existe el primero) y deja esta sección:
+## Requirements
+
+- Rocket League on the same PC as the browser.
+- A current browser (Chrome, Edge or Firefox).
+
+## Enabling the Stats API
+
+The API is off by default. With the game **closed**, edit `TAGame\Config\TAStatsAPI.ini` in the game's install folder (or `DefaultStatsAPI.ini` if the first one doesn't exist) and leave this section:
 
 ```ini
 [TAGame.MatchStatsExporter_TA]
@@ -32,71 +42,77 @@ WebPort=49124
 Port=0
 ```
 
-- `PacketSendRate`: actualizaciones por segundo (máximo 120). `0` desactiva la API. Con 30 hay de sobra.
-- `WebPort`: puerto del WebSocket al que se conecta el panel.
-- `Port=0`: cierra el socket TCP (49123 por defecto) que el juego abre además del WebSocket. El panel no lo usa.
+- `PacketSendRate`: updates per second (120 max). `0` turns the API off. 30 is plenty.
+- `WebPort`: the WebSocket port the panel connects to.
+- `Port=0`: closes the TCP socket (49123 by default) that the game opens besides the WebSocket. The panel doesn't use it.
 
-Cualquier cambio exige reiniciar el juego.
+Any change requires restarting the game.
 
-## Uso
+## Usage
 
-1. Descarga el repositorio (botón **Code → Download ZIP**) y descomprímelo.
-2. Abre `index.html` con doble clic. No hace falta instalar nada.
-3. Abre el juego y entra en una partida. El panel se conecta solo y, si el juego no está abierto, lo reintenta cada 2 segundos.
+1. Download the repository (**Code → Download ZIP**) and unzip it.
+2. Double-click `index.html`. Nothing to install.
+3. Start the game and join a match. The panel connects on its own and, if the game isn't running, retries every 2 seconds.
 
-Para verlo en un stream, añade `index.html` en OBS como **fuente de navegador** con la opción de archivo local.
+To show it on a stream, add `index.html` to OBS as a **browser source** using the local file option.
 
-### Parámetros de URL
+### URL parameters
 
-| Parámetro | Qué hace |
+| Parameter | What it does |
 |---|---|
-| `?demo` | Arranca en modo demo, con una partida simulada. |
-| `?me=Nombre` | Fija quién eres y desactiva la detección automática. |
-| `?port=49124` | Usa otro puerto si has cambiado `WebPort`. |
+| `?demo` | Starts in demo mode, with a simulated match. |
+| `?me=Name` | Sets who you are and turns off auto-detection. |
+| `?lang=en` or `?lang=es` | Picks the panel language. |
+| `?port=49124` | Uses another port if you changed `WebPort`. |
 
-Se combinan con `&`, por ejemplo `index.html?demo&me=Kaiser`.
+Combine them with `&`, for example `index.html?demo&me=Kaiser`.
 
-### Modo demo
+### Language
 
-El botón **Modo demo** simula una partida 3v3 para ver el panel sin el juego abierto. Los datos tienen la misma forma que los reales. La demo usa una sesión de ejemplo propia, que no toca tu historial real.
+The panel starts in Spanish if your browser is in Spanish, and in English otherwise. The **ES | EN** switch changes it instantly and your choice is remembered. Only the panel's own texts are translated: team names without a club ("Orange") and play types ("Save", "Demolition") come from the game in its own language, so with the panel in English and the game in Spanish you'll see, for example, "Salvada by Kaiser".
 
-### Grabar un registro
+### Demo mode
 
-**Grabar registro** guarda en memoria todo lo que manda el juego y **Descargar registro** lo exporta como JSON (`rl-log-<fecha>.json`), con un campo `t` (hora local en ms) en cada mensaje. Sirve para analizar partidas o depurar el panel.
+The **Demo mode** button simulates a 3v3 match so you can see the panel without the game running. The data has the same shape as the real thing. The demo uses its own sample session and doesn't touch your real history.
 
-- Está apagado por defecto. Empezar una grabación nueva descarta la anterior.
-- Para un máximo de 60.000 mensajes, unos 33 minutos a 30 actualizaciones por segundo.
-- El equipamiento de cada jugador solo se guarda la primera vez, porque es lo que más ocupa.
-- **El registro incluye los nombres y los ID de plataforma (Steam, Epic, PlayStation, Xbox) de todos los jugadores de la partida.** Ten cuidado si lo compartes.
+### Recording a log
 
-## Qué datos da el juego
+**Record log** keeps everything the game sends in memory, and **Download log** exports it as JSON (`rl-log-<date>.json`), with a `t` field (local time in ms) on each message. Useful to analyse matches or debug the panel.
 
-Algunos comportamientos de la API no coinciden con su documentación. Esto es lo que se ha comprobado con partidas reales, y explica lo que verás en el panel:
+- Off by default. Starting a new recording discards the previous one.
+- Stops at 60,000 messages, about 33 minutes at 30 updates per second.
+- Each player's loadout is only kept the first time, since it takes up the most space.
+- **The log includes the names and platform IDs (Steam, Epic, PlayStation, Xbox) of every player in the match.** Be careful if you share it.
 
-- **Boost**: online solo llega el de tu equipo. El de los rivales llega únicamente durante las repeticiones de gol; el resto del tiempo el panel muestra "—" (sin dato).
-- **Velocidades**: llegan en km/h, aunque la documentación dice unidades del juego por segundo.
-- **Sin rango ni MMR**: la API no los envía.
-- **Idioma**: los nombres de equipo sin club y los textos de las jugadas llegan en el idioma del juego.
-- **Quién eres**: se deduce del jugador al que sigue la cámara al empezar cada partida. Si estás espectando o la detección falla, usa `?me=`.
-- **La sesión solo cuenta partidas online**: las partidas offline o contra bots no traen identificador de partida y no se guardan.
+## What data the game provides
 
-## Seguridad
+Some of the API's behaviour doesn't match its documentation. This is what has been checked against real matches, and it explains what you'll see in the panel:
 
-La Stats API **no tiene autenticación** y, además de enviar datos, **acepta comandos** (pausar, cambiar la cámara, ocultar el HUD, controlar repeticiones).
+- **Boost**: online, only your own team's boost is sent. Opponents' boost only arrives during goal replays; the rest of the time the panel shows "—" (no data).
+- **Speeds**: they arrive in km/h, although the documentation says game units per second.
+- **No rank or MMR**: the API doesn't send them.
+- **Language**: team names without a club and play texts arrive in the game's language.
+- **Who you are**: worked out from the player the camera follows at the start of each match. If you're spectating or detection fails, use `?me=`.
+- **The session only counts online matches**: offline and bot matches carry no match ID and are not saved.
 
-- **No abras nunca el puerto 49124 (ni el 49123) a Internet** ni lo redirijas en el router.
-- Un WebSocket no tiene las restricciones de origen de otras peticiones: mientras el juego esté abierto con la API activada, cualquier página web que tengas abierta en el navegador podría conectarse a él. Si no vas a usar el panel, desactiva la API con `PacketSendRate=0`.
+## Security
 
-## Estructura
+The Stats API has **no authentication** and, besides sending data, **accepts commands** (pause, change the camera, hide the HUD, control replays).
+
+- **Never open port 49124 (or 49123) to the Internet** or forward it on your router.
+- A WebSocket isn't bound by the origin restrictions of other requests: while the game is running with the API on, any web page open in your browser could connect to it. If you're not using the panel, turn the API off with `PacketSendRate=0`.
+
+## Structure
 
 ```
-index.html   estructura de la página
-styles.css   estilos
-app.js       conexión con el juego, estado, render y modo demo
+index.html   page structure
+styles.css   styles
+app.js       game connection, state, English and Spanish texts, rendering and demo mode
+docs/        screenshots for the README
 ```
 
-Sin dependencias ni proceso de build. Las únicas peticiones externas son las fuentes Barlow y Barlow Condensed de Google Fonts, con fuentes del sistema de respaldo.
+No dependencies and no build step. The only external requests are the Barlow and Barlow Condensed fonts from Google Fonts, with system fallbacks.
 
-## Licencia
+## License
 
 [MIT](LICENSE).

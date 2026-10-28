@@ -17,36 +17,39 @@
     <span id="arena"></span>
     <span class="me-status" id="meStatus"></span>
     <span class="spacer"></span>
-    <button id="demoBtn" aria-pressed="false">Modo demo</button>
-    <button id="recBtn" aria-pressed="false" title="Graba todo lo que envía el juego para poder descargarlo. Consume memoria: actívalo solo cuando lo necesites.">Grabar registro</button>
-    <button id="logBtn" disabled>Descargar registro (<span id="logCount">0</span>)</button>
+    <div class="lang" role="group" data-i18n-aria="langGroup" aria-label="Idioma">
+      <button data-lang="es" aria-pressed="true" lang="es">ES</button><button data-lang="en" aria-pressed="false" lang="en">EN</button>
+    </div>
+    <button id="demoBtn" aria-pressed="false" data-i18n="demo">Modo demo</button>
+    <button id="recBtn" aria-pressed="false" data-i18n-title="recordTitle">Grabar registro</button>
+    <button id="logBtn" disabled><span data-i18n="download">Descargar registro</span> (<span id="logCount">0</span>)</button>
   </div>
 
-  <section class="board" aria-label="Marcador">
-    <div class="side blue"><span class="team-name" id="n0">Blue</span><span class="goals" id="g0">0</span></div>
+  <section class="board" data-i18n-aria="boardAria" aria-label="Marcador">
+    <div class="side blue"><span class="team-name" id="n0"></span><span class="goals" id="g0">0</span></div>
     <div class="clock-wrap">
       <div class="clock" id="clock">5:00</div>
       <div class="sub" id="sub"></div>
     </div>
-    <div class="side orange"><span class="goals" id="g1">0</span><span class="team-name" id="n1">Orange</span></div>
+    <div class="side orange"><span class="goals" id="g1">0</span><span class="team-name" id="n1"></span></div>
   </section>
 
-  <div class="touch" aria-label="Último toque del balón">
-    <span>Último toque</span>
+  <div class="touch" data-i18n-aria="touchAria" aria-label="Último toque del balón">
+    <span data-i18n="lastTouch">Último toque</span>
     <div class="touch-bar"><span id="touchMark"></span></div>
     <span id="touchText">—</span>
   </div>
 
   <div class="help" id="help">
-    <h2>Esperando al juego</h2>
-    <p>Abre Rocket League con la Stats API activada. El panel se conecta solo a <code id="wsUrl"></code> y lo reintenta cada 2 segundos.</p>
-    <p>Para activarla, edita <code>TAGame\Config\TAStatsAPI.ini</code> (o <code>DefaultStatsAPI.ini</code>) en la carpeta de instalación del juego, con el juego cerrado:</p>
+    <h2 data-i18n="helpTitle">Esperando al juego</h2>
+    <p data-i18n-html="help1"></p>
+    <p data-i18n-html="help2"></p>
 <pre>[TAGame.MatchStatsExporter_TA]
 PacketSendRate=30
 WebPort=49124
 Port=0</pre>
-    <p><code>Port=0</code> cierra el socket TCP (49123) que el juego abre además del WebSocket; el panel no lo usa.</p>
-    <p>Pulsa “Modo demo” para ver el panel con datos simulados.</p>
+    <p data-i18n-html="help3"></p>
+    <p data-i18n="help4"></p>
   </div>
 
   <div class="main">
@@ -55,12 +58,12 @@ Port=0</pre>
       <div class="tbl orange"><table><thead id="head1"></thead><tbody id="rows1"></tbody></table></div>
     </div>
     <aside class="feed" aria-live="polite">
-      <h2>Jugadas</h2>
+      <h2 data-i18n="feedTitle">Jugadas</h2>
       <ol id="feed"></ol>
-      <p id="feedEmpty">Aquí aparecerán los goles, paradas y demoliciones.</p>
+      <p id="feedEmpty" data-i18n="feedEmpty"></p>
     </aside>
-    <section class="session" aria-label="Sesión">
-      <div class="sess-head"><h2>Sesión</h2><button id="sessReset" title="Borra el historial y empieza una sesión nueva">Nueva sesión</button></div>
+    <section class="session" data-i18n-aria="sessAria" aria-label="Sesión">
+      <div class="sess-head"><h2 data-i18n="sessTitle">Sesión</h2><button id="sessReset" data-i18n="newSession" data-i18n-title="newSessionTitle">Nueva sesión</button></div>
       <div id="sessBody"></div>
     </section>
   </div>

@@ -73,6 +73,10 @@ button {
 button:hover { border-color: var(--muted); }
 button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.lang { display: inline-flex; }
+.lang button { padding: 6px 10px; }
+.lang button:first-child { border-radius: 6px 0 0 6px; }
+.lang button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
 
 /* Scoreboard */
 .board {
@@ -121,6 +125,8 @@ button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-
 }
 .touch-bar { height: 8px; border-radius: 4px; background: var(--line); position: relative; overflow: hidden; }
 .touch-bar span { position: absolute; top: 0; bottom: 0; width: 50%; transition: left .25s, background .25s; }
+/* Must come after the rule above to win */
+@media (prefers-reduced-motion: reduce) { .touch-bar span { transition: none; } }
 
 /* Tables */
 /* Wide: tables with the session below them, feed in the side column across both rows.
@@ -163,7 +169,7 @@ tr:last-child td { border-bottom: 0; }
 td.pts { font-weight: 700; }
 .name { font: 600 18px var(--body); }
 .me .name::after {
-  content: "Tú";
+  content: var(--me-label, "Tú"); /* set from app.js for the current language */
   font: 600 13px var(--body);
   color: var(--surface);
   background: var(--text);
