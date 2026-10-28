@@ -262,8 +262,9 @@
     state.replay = !!g.bReplay;
     detectMe(g);
     applyTeamColors();
-    // A goal is drawn at once, in sync with its animation; the rest is throttled
-    if (scored) render(); else scheduleRender();
+    // A goal is drawn at once, in sync with its animation; the rest is throttled.
+    // Boost is the exception: it is updated on every message.
+    if (scored) render(); else { updateBoosts(); scheduleRender(); }
   }
 
   // Detects who you are: while you play, the camera follows you. Takes the
@@ -437,19 +438,26 @@
     </tr>`;
   }
 
-  function rowsHTML(team) {
+  // The game omits fields that are 0: bHasCar without Boost means 0. No bHasCar
+  // means no data (online, opponents outside replays).
+  function boostOf(p) {
+    const known = 'bHasCar' in p;
+    const b = known && typeof p.Boost === 'number' ? Math.max(0, Math.min(100, Math.round(p.Boost))) : 0;
+    return { known, b, key: known ? String(b) : '—' };
+  }
+
+  // withBoost=false gives the same rows without boost values: it is the key that decides
+  // whether the table must be rebuilt, so boost changes alone never rebuild it.
+  function rowsHTML(team, withBoost = true) {
     const list = state.players.filter(p => p.TeamNum === team).sort((a, b) => (b.Score || 0) - (a.Score || 0));
     const cols = 10;
     if (!list.length) return `<tr class="empty-row"><td colspan="${cols}">${t('noPlayers')}</td></tr>`;
     return list.map(p => {
       const hit = state.maxHit[p.Name];
       const plat = platform(p.PrimaryId);
-      // The game omits fields that are 0: bHasCar without Boost means 0. No bHasCar
-      // means no data (online, opponents outside replays).
-      const known = 'bHasCar' in p;
-      const b = typeof p.Boost === 'number' ? Math.max(0, Math.min(100, Math.round(p.Boost))) : 0;
+      const { known, b } = withBoost ? boostOf(p) : { known: true, b: 0 };
       const boost = `<td class="boost-cell"${known ? '' : ` title="${t('noData')}"`}><div class="boost-wrap"><span class="boost"><i style="width:${known ? b : 0}%"></i></span><span class="boost-num">${known ? b : '—'}</span></div></td>`;
-      return `<tr class="${p.Name === me ? 'me' : ''}">
+      return `<tr data-p="${esc(p.Name)}" class="${p.Name === me ? 'me' : ''}">
         <td><span class="name">${esc(p.Name)}</span>${plat ? `<span class="plat">${plat}</span>` : ''}</td>
         <td class="pts">${p.Score ?? 0}</td><td>${p.Goals ?? 0}</td><td>${p.Assists ?? 0}</td>
         <td>${p.Saves ?? 0}</td><td>${p.Shots ?? 0}</td><td>${p.Touches ?? 0}</td><td>${p.Demos ?? 0}</td>
@@ -458,7 +466,24 @@
     }).join('');
   }
 
-  // UpdateState arrives ~30 times/s, but redrawing the tables more than ~10 times/s
+  // Boost changes on almost every UpdateState, so it is updated in place on every one
+  // (bar width and number only) and a short CSS transition smooths the steps between packets.
+  function updateBoosts() {
+    const byName = new Map(state.players.map(p => [p.Name, p]));
+    document.querySelectorAll('#rows0 tr[data-p], #rows1 tr[data-p]').forEach(tr => {
+      const p = byName.get(tr.dataset.p);
+      if (!p) return;
+      const { known, b, key } = boostOf(p);
+      const cell = tr.querySelector('.boost-cell');
+      if (cell.dataset.v === key) return;
+      cell.dataset.v = key;
+      cell.querySelector('.boost i').style.width = b + '%';
+      cell.querySelector('.boost-num').textContent = key;
+      if (known) cell.removeAttribute('title'); else cell.title = t('noData');
+    });
+  }
+
+  // UpdateState arrives ~30 times/s, but rebuilding the tables more than ~10 times/s
   // adds nothing visible and costs CPU on a PC that is running the game (and maybe OBS).
   const RENDER_MS = 100;
   let renderTimer = null, lastRender = 0;
@@ -478,8 +503,11 @@
     [0, 1].forEach(i => {
       setText('n' + i, teamName(i));
       setText('g' + i, state.teams[i]?.Score ?? 0);
-      setHTML('rows' + i, rowsHTML(i));
+      // Rebuilt rows are created with the current boost, so the bar doesn't animate from 0
+      const key = rowsHTML(i, false);
+      if (drawn['rows' + i] !== key) { drawn['rows' + i] = key; $('rows' + i).innerHTML = rowsHTML(i); }
     });
+    updateBoosts();
     setText('arena', state.arena ? t('map', { v: state.arena }) : '');
     const inMatch = state.players.some(p => p.Name === me);
     setHTML('meStatus', me && inMatch ? t('youAre', { v: esc(me) })
@@ -567,7 +595,8 @@
     [0, 1].forEach(i => { $('head' + i).innerHTML = headHTML(); });
     setStatus(statusKind, statusKey);
     updateLogUI();
-    drawn.touch = null; // team fallback names depend on the language
+    // Team fallback names and the "No data" tooltip depend on the language
+    drawn.touch = drawn.rows0 = drawn.rows1 = null;
     render();
     drawFeed();
     renderSession();
@@ -634,28 +663,40 @@
         send('GoalScored', { GoalSpeed: 60 + Math.random() * 60, ImpactLocation: { X: (Math.random() * 2 - 1) * 800, Y: (s.TeamNum ? -1 : 1) * 5200, Z: 200 }, Scorer: ref(s), Assister: as ? ref(as) : undefined, BallLastTouch: { Player: ref(s), Speed: 100 } });
         if (sim.ot) endMatch(s.TeamNum);
       }
-      if (sim.ticks % 3 === 0) {
-        send('UpdateState', {
-          MatchGuid: 'demo-' + sim.match,
-          // Like online: car and boost only for your own team, and Boost omitted when 0
-          Players: P.map(p => {
-            const o = { ...p };
-            if (p.TeamNum === 0) {
-              p.boost = Math.max(0, Math.min(100, (p.boost ?? 33) + (Math.random() < 0.1 ? 40 : -Math.random() * 6)));
-              o.bHasCar = true;
-              if (Math.round(p.boost)) o.Boost = Math.round(p.boost);
-            }
-            delete o.boost;
-            return o;
-          }),
-          Game: { Teams: [{ Name: 'Night Owls', TeamNum: 0, Score: sim.score[0], ColorPrimary: '7B2CBF', ColorSecondary: 'FFD60A' }, { Name: gameText.orange, TeamNum: 1, Score: sim.score[1], ColorPrimary: 'FF7F00', ColorSecondary: 'AA4400' }], TimeSeconds: sim.time, bOvertime: sim.ot, Ball: { Speed: 900, TeamNum: state.ballTeam }, bReplay: false, bHasWinner: false, Winner: '', Arena: 'Stadium_P', bHasTarget: true, Target: { Name: 'Nova', Shortcut: 1, TeamNum: 0 } },
-        });
-      }
     }, 100);
+    // UpdateState at ~30/s like PacketSendRate=30. Boost drains at ~33/s while boosting
+    // and jumps up on pickups (+12 small pad, 100 big pad), so the bar moves like the real one.
+    const FRAME_MS = 33;
+    const frame = setInterval(() => {
+      const dt = FRAME_MS / 1000;
+      P.forEach(p => {
+        p.boost ??= 33;
+        if (!p.boosting && Math.random() < 0.02) p.boosting = true;
+        if (p.boosting && (Math.random() < 0.03 || p.boost <= 0)) p.boosting = false;
+        if (p.boosting) p.boost -= 33.3 * dt;
+        if (Math.random() < 0.01) p.boost += 12;
+        if (Math.random() < 0.002) p.boost = 100;
+        p.boost = Math.max(0, Math.min(100, p.boost));
+      });
+      send('UpdateState', {
+        MatchGuid: 'demo-' + sim.match,
+        // Like online: car and boost only for your own team, and Boost omitted when 0
+        Players: P.map(({ boost, boosting, ...o }) => {
+          if (o.TeamNum === 0) {
+            o.bHasCar = true;
+            if (Math.round(boost)) o.Boost = Math.round(boost);
+            if (boosting) o.bBoosting = true;
+          }
+          return o;
+        }),
+        Game: { Teams: [{ Name: 'Night Owls', TeamNum: 0, Score: sim.score[0], ColorPrimary: '7B2CBF', ColorSecondary: 'FFD60A' }, { Name: gameText.orange, TeamNum: 1, Score: sim.score[1], ColorPrimary: 'FF7F00', ColorSecondary: 'AA4400' }], TimeSeconds: sim.time, bOvertime: sim.ot, Ball: { Speed: 900, TeamNum: state.ballTeam }, bReplay: false, bHasWinner: false, Winner: '', Arena: 'Stadium_P', bHasTarget: true, Target: { Name: 'Nova', Shortcut: 1, TeamNum: 0 } },
+      });
+    }, FRAME_MS);
+    demo = [demo, frame];
   }
 
   function stopDemo() {
-    clearInterval(demo); demo = null;
+    demo.forEach(clearInterval); demo = null;
     $('demoBtn').setAttribute('aria-pressed', 'false');
     state = freshState(); applyTeamColors();
     session = realSession; sessionPersist = true; renderSession();

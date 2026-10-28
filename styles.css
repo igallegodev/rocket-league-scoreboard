@@ -182,7 +182,9 @@ td.pts { font-weight: 700; }
 .tbl.orange tr.me td:first-child { box-shadow: inset 4px 0 0 var(--orange); }
 .me-status strong { color: var(--text); font-weight: 600; }
 .boost { flex: 0 1 56px; min-width: 20px; height: 8px; border-radius: 4px; background: var(--line); vertical-align: middle; overflow: hidden; }
-.boost i { display: block; height: 100%; background: var(--warn); }
+/* Packets come every ~35 ms: a slightly longer linear transition joins them into smooth movement */
+.boost i { display: block; height: 100%; background: var(--warn); transition: width .1s linear; }
+@media (prefers-reduced-motion: reduce) { .boost i { transition: none; } }
 .empty-row td { font: 400 15px var(--body); color: var(--muted); text-align: left; }
 .plat { font: 500 12px var(--body); color: var(--muted); margin-left: 8px; }
 
