@@ -13,6 +13,8 @@ Lee la [Stats API oficial de Rocket League](https://www.rocketleague.com/develop
 
 *Captura en modo demo, con datos simulados.*
 
+**[Prueba la demo en vivo](https://igallegodev.github.io/rocket-league-scoreboard/?demo&lang=es)**, sin necesidad del juego.
+
 > Proyecto no oficial. No está afiliado, patrocinado ni respaldado por Psyonix ni por Epic Games. Rocket League es una marca de Psyonix LLC.
 
 ## Qué muestra
@@ -50,11 +52,18 @@ Cualquier cambio exige reiniciar el juego.
 
 ## Uso
 
-1. Descarga [rocket-league-scoreboard.zip](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest/download/rocket-league-scoreboard.zip) (de la [última versión](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest)) y descomprímelo.
-2. Abre `index.html` con doble clic. No hace falta instalar nada.
-3. Abre el juego y entra en una partida. El panel se conecta solo y, si el juego no está abierto, lo reintenta cada 2 segundos.
+Puedes usarlo desde la web o descargarlo. En los dos casos, abre el juego y entra en una partida: el panel se conecta solo y, si el juego no está abierto, lo reintenta cada 2 segundos.
 
-Para verlo en un stream, añade `index.html` en OBS como **fuente de navegador** con la opción de archivo local.
+**Desde la web**: abre [igallegodev.github.io/rocket-league-scoreboard](https://igallegodev.github.io/rocket-league-scoreboard/) en el PC donde juegas. El navegador te pedirá permiso para acceder a dispositivos de tu red local: acéptalo, porque así es como la página llega al juego. Siempre está actualizado, pero necesita conexión a Internet.
+
+**Descargado**:
+
+1. Descarga [rocket-league-scoreboard.zip](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest/download/rocket-league-scoreboard.zip) (de la [última versión](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest)) y descomprímelo.
+2. Abre `index.html` con doble clic. No hace falta instalar nada ni dar permisos.
+
+Para verlo en un stream, añade el `index.html` descargado en OBS como **fuente de navegador** con la opción de archivo local.
+
+El historial de la sesión se guarda por separado en cada forma de abrirlo: la versión web y la descargada no lo comparten.
 
 ### Parámetros de URL
 

@@ -13,6 +13,8 @@ It reads the [official Rocket League Stats API](https://www.rocketleague.com/dev
 
 *Screenshot in demo mode, with simulated data.*
 
+**[Try the live demo](https://igallegodev.github.io/rocket-league-scoreboard/?demo&lang=en)**, no game needed.
+
 > Unofficial project. Not affiliated with, sponsored or endorsed by Psyonix or Epic Games. Rocket League is a trademark of Psyonix LLC.
 
 ## What it shows
@@ -50,11 +52,18 @@ Any change requires restarting the game.
 
 ## Usage
 
-1. Download [rocket-league-scoreboard.zip](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest/download/rocket-league-scoreboard.zip) (from the [latest release](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest)) and unzip it.
-2. Double-click `index.html`. Nothing to install.
-3. Start the game and join a match. The panel connects on its own and, if the game isn't running, retries every 2 seconds.
+You can use it from the web or download it. Either way, start the game and join a match: the panel connects on its own and, if the game isn't running, retries every 2 seconds.
 
-To show it on a stream, add `index.html` to OBS as a **browser source** using the local file option.
+**From the web**: open [igallegodev.github.io/rocket-league-scoreboard](https://igallegodev.github.io/rocket-league-scoreboard/) on the PC where you play. The browser will ask for permission to access devices on your local network: allow it, since that's how the page reaches the game. Always up to date, but it needs an internet connection.
+
+**Downloaded**:
+
+1. Download [rocket-league-scoreboard.zip](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest/download/rocket-league-scoreboard.zip) (from the [latest release](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest)) and unzip it.
+2. Double-click `index.html`. Nothing to install and no permission to grant.
+
+To show it on a stream, add the downloaded `index.html` to OBS as a **browser source** using the local file option.
+
+The session history is saved separately for each way of opening it: the web version and the downloaded one don't share it.
 
 ### URL parameters
 
