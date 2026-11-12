@@ -35,7 +35,11 @@ Lee la [Stats API oficial de Rocket League](https://www.rocketleague.com/develop
 
 ## Activar la Stats API
 
-La API viene desactivada. Con el juego **cerrado**, edita `TAGame\Config\TAStatsAPI.ini` en la carpeta de instalación del juego (o `DefaultStatsAPI.ini` si no existe el primero) y deja esta sección:
+La API viene desactivada. Solo hay que activarla una vez, con el juego **cerrado**.
+
+**Automático**: abre con doble clic `enable-stats-api.bat`, que viene en el [zip del panel](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest/download/rocket-league-scoreboard.zip). Si usas la versión web, descarga solo el script: [enable-stats-api.zip](https://github.com/igallegodev/rocket-league-scoreboard/releases/latest/download/enable-stats-api.zip) (descomprímelo antes, porque el `.bat` necesita el `.ps1` al lado). El script busca el juego (Steam o Epic), te enseña qué va a cambiar y te pregunta antes de hacerlo. Antes hace una copia del fichero, y si lo vuelves a ejecutar te deja deshacer el cambio. Es un script de PowerShell normal (`enable-stats-api.ps1`) que puedes abrir con el Bloc de notas para ver exactamente qué hace. Puede que Windows te avise porque está descargado de Internet. La detección de Epic aún no se ha probado con una instalación real: si no encuentra el juego, te pide la carpeta.
+
+**A mano**: edita `TAGame\Config\TAStatsAPI.ini` en la carpeta de instalación del juego (o `DefaultStatsAPI.ini` si no existe el primero) y deja esta sección:
 
 ```ini
 [TAGame.MatchStatsExporter_TA]
