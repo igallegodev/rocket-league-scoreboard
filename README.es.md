@@ -23,7 +23,7 @@ Lee la [Stats API oficial de Rocket League](https://www.rocketleague.com/develop
 - **Último toque**: qué equipo tocó el balón por última vez.
 - **Una tabla por equipo**, ordenada por puntos: plataforma de cada jugador (Steam, Epic, PS, Xbox, Switch), puntos, goles, asistencias, paradas, tiros, toques, demoliciones, golpe más fuerte (km/h) y boost.
 - **Jugadas**: las últimas 12 (goles con velocidad y asistente, paradas, demoliciones, larguerazos, MVP y fin del partido). Las tuyas aparecen resaltadas.
-- **Sesión**: victorias y derrotas de las partidas online que terminas, % de victorias, racha actual y mejor racha, los últimos 10 resultados, y tus goles, asistencias, paradas y demoliciones (en total y por partida), MVP y % de tiros que acaban en gol. Se guarda en el navegador y se reinicia sola tras 6 horas sin jugar, o con el botón **Nueva sesión**. Si sales de una partida antes de que acabe, cuenta como derrota ("aband.").
+- **Sesión**: victorias y derrotas de las partidas online que terminas, % de victorias, racha actual y mejor racha, los últimos 20 resultados, y tus goles, asistencias, paradas y demoliciones (en total y por partida), MVP y % de tiros que acaban en gol. Se guarda en el navegador y se reinicia sola tras 6 horas sin jugar, o con el botón **Nueva sesión**. Si sales de una partida antes de que acabe, cuenta como derrota ("aband.").
 - **"Tú"**: tu fila se resalta automáticamente.
 - **Español e inglés**, con el selector **ES | EN** de la barra superior.
 - **Tema claro y oscuro** según el sistema, y diseño adaptable: la sesión va debajo de las tablas y las jugadas en una columna a la derecha; por debajo de 1250 px de ancho, las jugadas pasan debajo de las tablas y la sesión al final.

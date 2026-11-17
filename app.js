@@ -327,6 +327,7 @@
   // Online matches you finish, kept in localStorage. A new session starts after
   // 6 h without playing or with the "New session" button.
   const SESSION_KEY = 'rl-session', SESSION_IDLE = 6 * 3600e3;
+  const SESSION_LIST = 20; // results shown in "Last matches"; the stats use the whole session
   const newSession = () => ({ started: Date.now(), last: Date.now(), matches: [] });
   function loadSession() {
     try {
@@ -371,7 +372,7 @@
     const goals = sum('goals'), shots = sum('shots');
     const rows = [['sGoals', 'goals'], ['sAssists', 'assists'], ['sSaves', 'saves'], ['sDemos', 'demos']]
       .map(([label, k]) => `<tr><th scope="row">${t(label)}</th><td>${sum(k)}</td><td>${fmt1(sum(k) / n)}</td></tr>`).join('');
-    const list = ms.slice(-10).reverse().map(m =>
+    const list = ms.slice(-SESSION_LIST).reverse().map(m =>
       `<li class="${m.won ? 'w' : 'l'}" title="${t(m.abandoned ? 'abandoned' : m.won ? 'win' : 'loss')} ${m.my}-${m.opp}">
         <b>${t(m.won ? 'winLetter' : 'lossLetter')}</b> ${m.my}-${m.opp}${m.abandoned ? ` <small>${t('abandonedShort')}</small>` : ''}${m.mvp ? ' <small>MVP</small>' : ''}</li>`).join('');
     const streakTxt = t((ms[n - 1].won ? 'streakW' : 'streakL') + (streak === 1 ? '1' : 'n'), { n: streak });

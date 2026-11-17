@@ -23,7 +23,7 @@ It reads the [official Rocket League Stats API](https://www.rocketleague.com/dev
 - **Last touch**: which team touched the ball last.
 - **One table per team**, sorted by score: each player's platform (Steam, Epic, PS, Xbox, Switch), score, goals, assists, saves, shots, touches, demolitions, hardest hit (km/h) and boost.
 - **Plays**: the last 12 (goals with speed and assister, saves, demolitions, crossbar hits, MVP and end of match). Yours are highlighted.
-- **Session**: wins and losses of the online matches you finish, win rate, current and best streak, the last 10 results, and your goals, assists, saves and demolitions (total and per match), MVPs and shooting percentage. It is saved in the browser and resets by itself after 6 hours without playing, or with the **New session** button. Leaving a match before it ends counts as a loss ("left").
+- **Session**: wins and losses of the online matches you finish, win rate, current and best streak, the last 20 results, and your goals, assists, saves and demolitions (total and per match), MVPs and shooting percentage. It is saved in the browser and resets by itself after 6 hours without playing, or with the **New session** button. Leaving a match before it ends counts as a loss ("left").
 - **"You"**: your row is highlighted automatically.
 - **English and Spanish**, with the **ES | EN** switch in the top bar.
 - **Light and dark theme** following your system, and a responsive layout: the session sits below the tables and the plays in a column on the right; below 1250 px wide, the plays move below the tables and the session goes last.
